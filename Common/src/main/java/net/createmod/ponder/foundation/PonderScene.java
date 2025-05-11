@@ -18,6 +18,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import net.createmod.ponder.api.level.EmptyLevel;
+
 import org.apache.commons.lang3.mutable.MutableDouble;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.joml.Matrix4f;
@@ -118,8 +120,7 @@ public class PonderScene {
             world.scene = this;
 			this.world = world;
         } else {
-			this.world = null; //TODO
-			//this.world = new PonderLevel(BlockPos.ZERO, new EmptyLevel());
+			this.world = new PonderLevel(BlockPos.ZERO, new EmptyLevel());
 		}
 
 		this.localization = localization;
@@ -143,7 +144,7 @@ public class PonderScene {
 		basePlateSize = getBounds().getXSpan();
 		camera = new SceneCamera();
 		baseWorldSection = new WorldSectionElementImpl();
-		renderViewEntity = new ArmorStand(world, 0, 0, 0);
+		renderViewEntity = new ArmorStand(this.world, 0, 0, 0);
 		keyframeTimes = new IntArrayList(4);
 		scaleFactor = 1;
 		yOffset = 0;
