@@ -16,6 +16,7 @@ import net.createmod.catnip.client.render.model.ShadeSeparatedBufferSource;
 import net.createmod.catnip.client.render.model.ShadeSeparatedResultConsumer;
 import net.createmod.catnip.impl.client.render.model.BakedModelBuffererImpl;
 import net.createmod.catnip.platform.services.ModClientHooksHelper;
+import net.createmod.catnip.render.BasicFluidRenderer;
 import net.createmod.ponder.utility.VertexUtils;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
@@ -75,7 +76,7 @@ public class FabricClientHooksHelper implements ModClientHooksHelper {
 
 	@Override
 	public void renderFullFluidState(PoseStack ms, MultiBufferSource.BufferSource buffer, FluidState fluid) {
-		CatnipServices.FLUID_RENDERER.renderFluidBox(fluid, 0, 0, 0, 1, 1, 1, buffer, ms, LightTexture.FULL_BRIGHT, false, true);
+		BasicFluidRenderer.renderFluidBox(fluid.getType(), 1000, 0, 0, 0, 1, 1, 1, buffer, ms, LightTexture.FULL_BRIGHT, false, true);
 	}
 
 	@Override

@@ -1,50 +1,59 @@
 package net.createmod.catnip.render;
 
+import org.jetbrains.annotations.Nullable;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 
 import net.createmod.catnip.data.Iterate;
 import net.createmod.catnip.platform.CatnipServices;
-import net.createmod.catnip.platform.services.ModFluidHelper;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
-import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
 
-public final class FluidRenderHelper<T> {
-	public void renderFluidBox(FluidState fluid, float xMin, float yMin, float zMin, float xMax, float yMax, float zMax,
-							   MultiBufferSource buffer, PoseStack ms, int light, boolean renderBottom, boolean invertGasses) {
-		this.renderFluidBox(fluid, xMin, yMin, zMin, xMax, yMax, zMax, getFluidBuilder(buffer), ms, light, renderBottom, invertGasses);
+public class BasicFluidRenderer {
+
+	public static VertexConsumer getFluidBuilder(MultiBufferSource buffer) {
+		return buffer.getBuffer(PonderRenderTypes.fluid());
 	}
 
-	public void renderFluidBox(FluidState fluid, float xMin, float yMin, float zMin, float xMax, float yMax, float zMax,
-							   VertexConsumer builder, PoseStack ms, int light, boolean renderBottom, boolean invertGasses) {
-		this.renderFluidBox(this.helper().toStack(fluid), xMin, yMin, zMin, xMax, yMax, zMax, builder, ms, light, renderBottom, invertGasses);
+	public static void renderFluidBox(Fluid fluid, long amount, float xMin, float yMin, float zMin, float xMax,
+			float yMax, float zMax, MultiBufferSource buffer, PoseStack ms, int light, boolean renderBottom, boolean invertGasses) {
+		renderFluidBox(fluid, amount, xMin, yMin, zMin, xMax, yMax, zMax, getFluidBuilder(buffer), ms, light, renderBottom, invertGasses, null);
 	}
 
-	public void renderFluidBox(T fluid, float xMin, float yMin, float zMin, float xMax, float yMax, float zMax,
-			MultiBufferSource buffer, PoseStack ms, int light, boolean renderBottom, boolean invertGasses) {
-		this.renderFluidBox(fluid, xMin, yMin, zMin, xMax, yMax, zMax, getFluidBuilder(buffer), ms, light, renderBottom, invertGasses);
+	public static void renderFluidBox(Fluid fluid, long amount, float xMin, float yMin, float zMin, float xMax,
+			float yMax, float zMax, VertexConsumer builder, PoseStack ms, int light, boolean renderBottom, boolean invertGasses) {
+		renderFluidBox(fluid, amount, xMin, yMin, zMin, xMax, yMax, zMax, builder, ms, light, renderBottom, invertGasses, null);
 	}
 
-	public void renderFluidBox(T fluid, float xMin, float yMin, float zMin, float xMax, float yMax, float zMax,
-			VertexConsumer builder, PoseStack ms, int light, boolean renderBottom, boolean invertGasses) {
-		ModFluidHelper<T> helper = this.helper();
+	public static void renderFluidBox(Fluid fluid, long amount, float xMin, float yMin, float zMin, float xMax,
+			float yMax, float zMax, MultiBufferSource buffer, PoseStack ms, int light, boolean renderBottom, boolean invertGasses, @Nullable CompoundTag fluidData) {
+		renderFluidBox(fluid, amount, xMin, yMin, zMin, xMax, yMax, zMax, getFluidBuilder(buffer), ms, light, renderBottom, invertGasses, fluidData);
+	}
 
-		TextureAtlasSprite fluidTexture = helper.getStillTextureOrMissing(fluid);
-		int color = helper.getColor(fluid, null, null);
+	public static void renderFluidBox(Fluid fluid, long amount, float xMin, float yMin, float zMin, float xMax,
+			float yMax, float zMax, VertexConsumer builder, PoseStack ms, int light, boolean renderBottom, boolean invertGasses, @Nullable CompoundTag fluidData) {
+		TextureAtlasSprite fluidTexture = Minecraft.getInstance()
+				.getTextureAtlas(InventoryMenu.BLOCK_ATLAS)
+				.apply(CatnipServices.FLUID_HELPER.getStillTexture(fluid, amount, fluidData));
 
+		int color = CatnipServices.FLUID_HELPER.getColor(fluid, amount, fluidData);
 		int blockLightIn = (light >> 4) & 0xF;
-		int luminosity = Math.max(blockLightIn, helper.getLuminosity(fluid));
+		int luminosity = Math.max(blockLightIn, CatnipServices.FLUID_HELPER.getLuminosity(fluid, amount, fluidData));
 		light = (light & 0xF00000) | luminosity << 4;
 
 		Vec3 center = new Vec3(xMin + (xMax - xMin) / 2, yMin + (yMax - yMin) / 2, zMin + (zMax - zMin) / 2);
 		ms.pushPose();
-		if (invertGasses && helper.isLighterThanAir(fluid)) {
+		if (invertGasses && CatnipServices.FLUID_HELPER.isLighterThanAir(fluid)) {
 			ms.translate(center.x, center.y, center.z);
 			ms.mulPose(Axis.XP.rotationDegrees(180));
 			ms.translate(-center.x, -center.y, -center.z);
@@ -71,10 +80,6 @@ public final class FluidRenderHelper<T> {
 		}
 
 		ms.popPose();
-	}
-
-	public static VertexConsumer getFluidBuilder(MultiBufferSource buffer) {
-		return buffer.getBuffer(PonderRenderTypes.fluid());
 	}
 
 	public static void renderStillTiledFace(Direction dir, float left, float down, float right, float up,
@@ -147,7 +152,7 @@ public final class FluidRenderHelper<T> {
 		}
 	}
 
-	private static void putVertex(VertexConsumer builder, PoseStack ms, float x, float y, float z, int color, float u,
+	protected static void putVertex(VertexConsumer builder, PoseStack ms, float x, float y, float z, int color, float u,
 			float v, Direction face, int light) {
 
 		Vec3i normal = face.getNormal();
@@ -166,8 +171,4 @@ public final class FluidRenderHelper<T> {
 				.endVertex();
 	}
 
-	@SuppressWarnings("unchecked")
-	private ModFluidHelper<T> helper() {
-		return (ModFluidHelper<T>) CatnipServices.FLUID_HELPER;
 	}
-}
