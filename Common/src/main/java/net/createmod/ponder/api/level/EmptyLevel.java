@@ -2,13 +2,16 @@ package net.createmod.ponder.api.level;
 
 import java.util.List;
 
+import com.mojang.serialization.Lifecycle;
+
+import net.minecraft.core.*;
+
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.damagesource.DamageTypes;
+
 import org.jetbrains.annotations.Nullable;
 
 import net.createmod.catnip.levelWrappers.DummyLevelEntityGetter;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.sounds.SoundEvent;
@@ -37,7 +40,7 @@ public class EmptyLevel extends Level {
 		super(
 				null,
 				null,
-				null,//TODO
+				createDamageTypeAccessRegistry(),
 				VanillaRegistries.createLookup().asGetterLookup().lookupOrThrow(Registries.DIMENSION_TYPE).getOrThrow(BuiltinDimensionTypes.OVERWORLD),
 				null,
 				false,
@@ -45,6 +48,19 @@ public class EmptyLevel extends Level {
 				0,
 				0
 		);
+	}
+
+	private static RegistryAccess createDamageTypeAccessRegistry() {
+		RegistrySetBuilder registryBuilder = new RegistrySetBuilder()
+			.add(Registries.DAMAGE_TYPE, DamageTypes::bootstrap);
+		HolderLookup.RegistryLookup<DamageType> damageTypeRegistryLookup = registryBuilder.build(RegistryAccess.EMPTY).lookupOrThrow(Registries.DAMAGE_TYPE);
+
+		Registry<DamageType> damageTypesRegistry = new MappedRegistry<>(Registries.DAMAGE_TYPE, Lifecycle.stable());
+		damageTypeRegistryLookup.listElementIds().forEach(
+			(key) -> Registry.register(damageTypesRegistry, key, damageTypeRegistryLookup.get(key).orElseThrow().value())
+		);
+
+		return new RegistryAccess.ImmutableRegistryAccess(List.of(damageTypesRegistry));
 	}
 
 	@Override
@@ -119,11 +135,6 @@ public class EmptyLevel extends Level {
 
 	@Override
 	public void gameEvent(GameEvent gameEvent, Vec3 vec3, GameEvent.Context context) {}
-
-	@Override
-	public RegistryAccess registryAccess() {
-		return null;
-	}
 
 	@Override
 	public FeatureFlagSet enabledFeatures() {
